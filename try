@@ -5,6 +5,8 @@ require_once "TryLib/Autoload.php";
 
 # URL to your jenkins server (without http)
 $jenkins_server = 'localhost:8080';
+$jenkins_username = '';
+$jenkins_passwd = '';
 
 # Path to the jenkins cli.jar - download it from http://your.jenkins.instance/cli
 $jenkins_cli_jar = '/usr/bin/jenkins-cli.jar';
@@ -18,6 +20,10 @@ $user = getenv("USER");
 
 # Working copy path (path to your local git repository)
 $default_wc_path = '.';
+
+$default_upstream = 'origin';
+
+$email = '';
 
 #################################################################################################
 
@@ -45,6 +51,9 @@ jenkinsjob=         Master Job Name in Jenkins  [$default_jenkins_job]
 jenkinsjobprefix=   Subjobs prefix              [$default_jenkins_job_prefix]
 jenkinsserver=      URL to the jenkins server   [$jenkins_server]
 wcpath=             Working Copy Path           [$default_wc_path]
+upstream=           Git upstream name           [$default_upstream]
+jenkinsusername=    Jenkins username            [$jenkins_username]
+jenkinspasswd=      Jenkins passwd              [$jenkins_passwd]
 ";
 
 # Parse options
@@ -62,23 +71,24 @@ $repo_manager = new TryLib_RepoManager_Git($options->wcpath, $cmd_runner);
 $remote_branch = $options->branch;
 
 $repo_manager->setRemoteBranch($remote_branch);
+$repo_manager->setUpstream($options->upstream);
 
 # [Jenkins Freestyle project]
-#$jenkins_runner = new TryLib_JenkinsRunner_FreeStyleProject(
-#    $options->jenkinsserver,
-#    $jenkins_cli_jar,
-#    $options->jenkinsjob,
-#    $cmd_runner
-#);
-
-# [Jenkins MasterProject only]
-$jenkins_runner = new TryLib_JenkinsRunner_MasterProject(
+$jenkins_runner = new TryLib_JenkinsRunner_FreeStyleProject(
     $options->jenkinsserver,
     $jenkins_cli_jar,
     $options->jenkinsjob,
-    $cmd_runner,
-    $options->jenkinsjobprefix
+    $cmd_runner
 );
+
+# [Jenkins MasterProject only]
+#$jenkins_runner = new TryLib_JenkinsRunner_MasterProject(
+#    $options->jenkinsserver,
+#    $jenkins_cli_jar,
+#    $options->jenkinsjob,
+#    $cmd_runner,
+#    $options->jenkinsjobprefix
+#);
 
 $whitelist = $options->whitelist;
 if (is_string($whitelist)) {
@@ -102,10 +112,14 @@ if ($options->diff_only) {
     exit(0);
 }
 
+fwrite(STDOUT, $options->jenkinsusername);
+
 $jenkins_runner->setPatch(realpath($patch));
 $jenkins_runner->setSshKey( getenv('HOME') . '/.ssh/try_id_rsa');
 $jenkins_runner->setParam('branch', $remote_branch);
 $jenkins_runner->setParam('guid', $user . time());
+$jenkins_runner->setUsername($options->jenkinsusername);
+$jenkins_runner->setPassword($options->jenkinspasswd);
 
 $extra_params = TryLib_Util_OptionsUtil::parseExtraParameters($options->extra_param);
 foreach($extra_params as $param) {
@@ -115,7 +129,7 @@ foreach($extra_params as $param) {
 $jenkins_runner->addCallback($options->callback);
 
 # [Jenkins MasterProject only] Set the subjobs - 
-$jenkins_runner->setSubJobs($subjobs);
+#$jenkins_runner->setSubJobs($subjobs);
 
 $jenkins_runner->startJenkinsJob($options->show_results, $options->show_progress);
 

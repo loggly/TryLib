@@ -6,6 +6,7 @@ class TryLib_RepoManager_Git implements TryLib_RepoManager {
     protected $branch;
     protected $remote;
     private $remote_branch;
+    private $upstream;
 
     public function __construct($repo_path, $cmd_runner) {
         $this->repo_path = $repo_path;
@@ -13,6 +14,7 @@ class TryLib_RepoManager_Git implements TryLib_RepoManager {
         $this->branch = null;
         $this->remote = null;
         $this->remote_branch = null;
+        $this->upstream = null;
     }
 
     function cleanRef($ref) {
@@ -65,6 +67,10 @@ class TryLib_RepoManager_Git implements TryLib_RepoManager {
         $this->remote_branch = $remote_branch;
     }
 
+    function setUpstream($upstream) {
+        $this->upstream = $upstream;
+    }
+
     function getRemoteBranch($default=null) {
         if (!is_null($this->remote_branch)) {
             return $this->remote_branch;
@@ -93,7 +99,7 @@ class TryLib_RepoManager_Git implements TryLib_RepoManager {
     }
 
     function getUpstream() {
-        $remote = $this->getRemote("origin");
+        $remote = $this->getRemote($this->upstream);
         $remote_branch = $this->getRemoteBranch("master");
         return $remote . "/" . $remote_branch;
     }

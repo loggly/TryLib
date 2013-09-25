@@ -20,6 +20,8 @@ abstract class TryLib_JenkinsRunner {
     private $options;
     private $callbacks;
     private $ssh_key_path;
+    private $jenkins_username;
+    private $jenkins_passwd;
 
     public function __construct(
         $jenkins_url,
@@ -61,7 +63,7 @@ abstract class TryLib_JenkinsRunner {
      */
     public function startJenkinsJob($show_results=false, $show_progress = false) {
         // Explicitly log out user to force re-authentication over SSH
-        $this->runJenkinsCommand("logout");
+        // $this->runJenkinsCommand("logout");
 
         // Build up the jenkins command incrementally
         $cli_command = $this->buildCLICommand($show_results, $show_progress);
@@ -90,6 +92,14 @@ abstract class TryLib_JenkinsRunner {
         if (file_exists($ssh_key_path)) {
             $this->ssh_key_path = $ssh_key_path;
         }
+    }
+
+    public function setUsername($jenkins_username) {
+        $this->jenkins_username = $jenkins_username;
+    }
+
+    public function setPassword($jenkins_passwd) {
+        $this->jenkins_passwd = $jenkins_passwd;
     }
 
     public function getSsKey() {
@@ -128,9 +138,17 @@ abstract class TryLib_JenkinsRunner {
             $command[] = '-i ' . $this->getSsKey();
         }
 
-        $command[] = $this->getBuildCommand();
+        $command[] = 'build';
 
         $command[] = $this->try_job_name;
+
+        if (!is_null($this->jenkins_username)) {
+            $command[] = '--username ' . $this->jenkins_username; 
+        }
+
+        if (!is_null($this->jenkins_passwd)) {
+            $command[] = '--password ' . $this->jenkins_passwd;
+        }
 
         $extra_args = $this->getBuildExtraArguments($show_results, $show_progress);
 
